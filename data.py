@@ -42,9 +42,11 @@ class Data(object):
             '''
 
     @staticmethod
-    def load_dataset(image_paths, batch_size, test=False, augment=False, downsample=False,
-            training_dataset='cityscapes', use_conditional_GAN=False, **kwargs):
-
+    def load_dataset(image_paths, batch_size, test=False, augment=False, downsample=False,training_dataset='cityscapes', use_conditional_GAN=False, **kwargs):           #called in model.py
+        '''
+        
+        '''
+        print('Type of image paths : ', type(image_paths))
         def _augment(image):
             # On-the-fly data augmentation
             image = tf.image.random_brightness(image, max_delta=0.1)
@@ -54,7 +56,7 @@ class Data(object):
             return image
 
         def _parser(image_path, semantic_map_path=None):
-
+            print('In call : shape of image path is ', (image_path.shape))
             def _aspect_preserving_width_resize(image, width=512):
                 height_i = tf.shape(image)[0]
                 # width_i = tf.shape(image)[1]
@@ -63,7 +65,10 @@ class Data(object):
                 new_height = height_i - tf.floormod(height_i, 16)
                 return tf.image.resize_image_with_crop_or_pad(image, new_height, width)
 
+
+            # ???????????????????
             def _image_decoder(path):
+                #print('type of Path here : ', type(path))
                 im = tf.image.decode_png(tf.read_file(path), channels=3)
                 im = tf.image.convert_image_dtype(im, dtype=tf.float32)
                 return 2 * im - 1 # [0,1] -> [-1,1] (tanh range)
@@ -98,12 +103,16 @@ class Data(object):
             dataset = tf.data.Dataset.from_tensor_slices((image_paths, kwargs['semantic_map_paths']))
         else:
             dataset = tf.data.Dataset.from_tensor_slices(image_paths)
-
+            print("type of dataset :", type(dataset))
+        
+        print('Just before parser  : ')
         dataset = dataset.map(_parser)
+        # Now we have the actual images stored in Dataset, not paths. 
         dataset = dataset.shuffle(buffer_size=8)
         dataset = dataset.batch(batch_size)
 
         if test:
+        # ??????????????
             dataset = dataset.repeat()
 
         return dataset

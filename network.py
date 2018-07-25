@@ -3,6 +3,7 @@
 """
 import tensorflow as tf
 from utils import Utils
+from capsLayer import CapsLayer
 
 class Network(object):
 
@@ -31,18 +32,23 @@ class Network(object):
             # Run convolutions
             f = [60, 120, 240, 480, 960]
             x = tf.pad(x, [[0, 0], [3, 3], [3, 3], [0, 0]], 'REFLECT')
+            print("shape of x, after 1st pad : ", x.get_shape(), x.shape)
             out = conv_block(x, filters=f[0], kernel_size=7, strides=1, padding='VALID', actv=actv)
-
+            print("shape of out, after conv1 : ", out.get_shape(), out.shape)
             out = conv_block(out, filters=f[1], kernel_size=3, strides=2, actv=actv)
+            print("shape of out, after conv2 : ", out.get_shape(), out.shape)
             out = conv_block(out, filters=f[2], kernel_size=3, strides=2, actv=actv)
+            print("shape        of out, after conv3 : ", out.get_shape(), out.shape)
             out = conv_block(out, filters=f[3], kernel_size=3, strides=2, actv=actv)
+            print("shape of out, after conv4 : ", out.get_shape(), out.shape)
             out = conv_block(out, filters=f[4], kernel_size=3, strides=2, actv=actv)
-
+            print("shape of out, after conv5 : ", out.get_shape(), out.shape)
             # Project channels onto space w/ dimension C
             # Feature maps have dimension W/16 x H/16 x C
             out = tf.pad(out, [[0, 0], [1, 1], [1, 1], [0, 0]], 'REFLECT')
+            print("shape of out, after 2nd pad : ", out.get_shape(), out.shape)            
             feature_map = conv_block(out, filters=C, kernel_size=3, strides=1, padding='VALID', actv=actv)
-            
+            print("shape of feature map, after final conv : ", feature_map.get_shape(), feature_map.shape)            
             return feature_map
 
 
@@ -73,6 +79,8 @@ class Network(object):
 
     @staticmethod
     def decoder(w_bar, config, training, C, reuse=False, actv=tf.nn.relu, channel_upsample=960):
+
+        print('<----------- inside decoder ---------->')
         """
         Attempt to reconstruct the image from the quantized representation w_bar.
         Generated image should be consistent with the true image distribution while
@@ -120,34 +128,51 @@ class Network(object):
         # W_pc = tf.get_variable('W_pc_{}'.format(C), shape=[C, channel_upsample], initializer=init)
         # upsampled = tf.einsum('ijkl,lm->ijkm', w_bar, W_pc)
         with tf.variable_scope('decoder', reuse=reuse):
+            
             w_bar = tf.pad(w_bar, [[0, 0], [1, 1], [1, 1], [0, 0]], 'REFLECT')
+            print('wbar after pad ######## : ', w_bar.shape, w_bar.get_shape())            
             upsampled = Utils.conv_block(w_bar, filters=960, kernel_size=3, strides=1, padding='VALID', actv=actv)
+            print('upsampled shape : ', upsampled.shape, upsampled.get_shape())
             
             # Process upsampled feature map with residual blocks
             res = residual_block(upsampled, 960, actv=actv)
+            print('res1 shape : ', res.shape, res.get_shape())
             res = residual_block(res, 960, actv=actv)
+            print('res2 shape : ', res.shape, res.get_shape())
             res = residual_block(res, 960, actv=actv)
+            print('res3 shape : ', res.shape, res.get_shape())
             res = residual_block(res, 960, actv=actv)
+            print('res4 shape : ', res.shape, res.get_shape())
             res = residual_block(res, 960, actv=actv)
+            print('res5 shape : ', res.shape, res.get_shape())
             res = residual_block(res, 960, actv=actv)
+            print('res6 shape : ', res.shape, res.get_shape())
             res = residual_block(res, 960, actv=actv)
+            print('res7 shape : ', res.shape, res.get_shape())
             res = residual_block(res, 960, actv=actv)
+            print('res8 shape : ', res.shape, res.get_shape())
             res = residual_block(res, 960, actv=actv)
-
+            print('res9 shape : ', res.shape, res.get_shape())
             # Upsample to original dimensions - mirror decoder
             f = [480, 240, 120, 60]
 
             ups = upsample_block(res, f[0], 3, strides=[2,2], padding='same')
+            print('ups1 shape : ', ups.shape, ups.get_shape())
             ups = upsample_block(ups, f[1], 3, strides=[2,2], padding='same')
+            print('ups2 shape : ', ups.shape, ups.get_shape())
             ups = upsample_block(ups, f[2], 3, strides=[2,2], padding='same')
+            print('ups shape : ', ups.shape, ups.get_shape())
             ups = upsample_block(ups, f[3], 3, strides=[2,2], padding='same')
-            
+            print('ups shape : ', ups.shape, ups.get_shape())            
             ups = tf.pad(ups, [[0, 0], [3, 3], [3, 3], [0, 0]], 'REFLECT')
+            print('after 1st pad shape : ', ups.shape, ups.get_shape())            
             ups = tf.layers.conv2d(ups, 3, kernel_size=7, strides=1, padding='VALID')
+            print('after 2nd pad shape : ', ups.shape, ups.get_shape())            
 
             out = tf.nn.tanh(ups)
-
+            print('after tanh shape : ', out.shape, out.get_shape())            
             return out
+
 
 
     @staticmethod
@@ -156,7 +181,7 @@ class Network(object):
         # Patch-GAN discriminator based on arXiv 1711.11585
         # bn_kwargs = {'center':True, 'scale':True, 'training':training, 'fused':True, 'renorm':False}
         in_kwargs = {'center':True, 'scale':True, 'activation_fn':actv}
-        print("---------inside discriminator-----------")
+        print("---------inside Normal discriminator-----------")
         print('Shape of x:', x.get_shape().as_list())
 
         with tf.variable_scope('discriminator', reuse=reuse):
@@ -172,13 +197,94 @@ class Network(object):
 
             if use_sigmoid is True:  # Otherwise use LS-GAN
                 out = tf.nn.sigmoid(out)
-
+        print('\n ******** Shape of out:', out.get_shape().as_list())
         return out
 
 
+
+
+
+
+
+
+
+
+    def capsule_discriminator(x, config, training, actv=tf.nn.leaky_relu, use_sigmoid=False, ksize=4, mode='real', reuse=False):            
+
+        if mode == 'real':
+            print('Mode real Building discriminator D(x)')
+        elif mode == 'reconstructed':
+            print('Mode reconstructed Building discriminator D(G(z))')
+        else:
+            raise NotImplementedError('Invalid discriminator mode specified.')    
+    
+    
+        x2 = tf.layers.average_pooling2d(x, pool_size=3, strides=2, padding='same')
+        x4 = tf.layers.average_pooling2d(x2, pool_size=3, strides=2, padding='same')
+        
+        def discriminator(x, scope, actv=actv, use_sigmoid=use_sigmoid, ksize=ksize, reuse=reuse, downsample='x'):
+            
+            with tf.variable_scope('discriminator_{}'.format(scope), reuse=reuse):
+                if downsample=='x':       
+                    output = tf.reshape(x, [-1, 1, 512, 1024])
+                    output = tf.transpose(output, [0, 2, 3, 1])
+                if downsample=='x2':       
+                    output = tf.reshape(x, [-1, 1, 256, 512])
+                    output = tf.transpose(output, [0, 2, 3, 1])
+                if downsample=='x4':       
+                    output = tf.reshape(x, [-1, 1, 128, 256])
+                    output = tf.transpose(output, [0, 2, 3, 1])
+                print("$$$$$$$$$$$$$$4 disc shape : ", output.get_shape().as_list())    
+                output_conv1 = tf.contrib.layers.conv2d(output, num_outputs=256, kernel_size=9, stride=2, activation_fn=tf.nn.relu, padding='VALID') 
+                print("*******output_conv1 shape :", output_conv1.get_shape().as_list())
+                primaryCaps = CapsLayer(num_outputs=32, vec_len=8, with_routing=False, layer_type='CONV',downsample=downsample) 
+                output_caps1 = primaryCaps(output_conv1, kernel_size=9, stride=2, batchsize=config.batch_size)  
+                print("*******output_caps1 shape :", output_caps1.get_shape().as_list())
+                digitCaps = CapsLayer(num_outputs=1, vec_len=16, with_routing=True, layer_type='FC', downsample=downsample)
+                output_caps2 = digitCaps(output_caps1, batchsize=config.batch_size)
+                print("*******output_caps2 shape :", output_caps2.get_shape().as_list())
+                # The output at this stage is of dimensions [batch_size, 16]
+                output_caps2 = tf.squeeze(output_caps2, axis=1)
+                print("*******output_caps2 shape after first squeeze :", output_caps2.get_shape().as_list())
+                output_caps2 = tf.squeeze(output_caps2, axis=2)
+                print("*******output_caps2 shape after second squeeze :", output_caps2.get_shape().as_list())           
+                #print(output_caps2.get_shape())
+                assert output_caps2.get_shape() == [config.batch_size, 16] # [batchsize,16] turns into 
+
+                # TODO: Try also removing the LeakyReLU from the CapsLayer file
+                # TODO: Try also with 10 digitcaps outputs + thresholding (instead of just 1 output)
+                # TODO: Adding batch normalization in capsules (See CapsLayer.py). 
+                # TODO: Try Changing the critic iteration count.
+
+                output_v_length = tf.sqrt(tf.reduce_sum(tf.square(output_caps2),axis=1, keep_dims=True) + 1e-9)
+
+                ## No need to take softmax anymore, because output_caps2 output is in [0,1] due to squash function.   
+                #softmax_v = tf.nn.softmax(v_length, dim=1)
+                print("*******output_caps2 shape after final reshape :", tf.reshape(output_v_length, [-1]).get_shape().as_list())
+                return tf.reshape(output_v_length, [-1])
+        
+        with tf.variable_scope('discriminator', reuse=reuse):
+            print('Inside ajh * * * * * ')
+            disc = discriminator(x, 'original', downsample='x')
+            print("############333shape of disc passed to discriminator :", disc.get_shape().as_list())
+            disc_downsampled_2 = discriminator(x2, 'downsampled_2', downsample='x2')
+            print("############333shape of disc passed to discriminator :", disc_downsampled_2.get_shape().as_list())
+            disc_downsampled_4 = discriminator(x4, 'downsampled_4', downsample='x4')
+            print("############333shape of disc passed to discriminator :", disc_downsampled_4.get_shape().as_list())
+
+        return disc, disc_downsampled_2, disc_downsampled_4
+
+
+
+
+
+
+
+
+
+            
     @staticmethod
-    def multiscale_discriminator(x, config, training, actv=tf.nn.leaky_relu, use_sigmoid=False, 
-        ksize=4, mode='real', reuse=False):
+    def multiscale_discriminator(x, config, training, actv=tf.nn.leaky_relu, use_sigmoid=False, ksize=4, mode='real', reuse=False):
         # x is either generator output G(z) or drawn from the real data distribution
         # Multiscale + Patch-GAN discriminator architecture based on arXiv 1711.11585
         print('<------------ Building multiscale discriminator architecture ------------>')
@@ -201,20 +307,24 @@ class Network(object):
         def discriminator(x, scope, actv=actv, use_sigmoid=use_sigmoid, ksize=ksize, reuse=reuse):
 
             # Returns patch-GAN output + intermediate layers
-
+            print('\n ******** Shape of x:', x.get_shape().as_list())
             with tf.variable_scope('discriminator_{}'.format(scope), reuse=reuse):
                 c1 = tf.layers.conv2d(x, 64, kernel_size=ksize, strides=2, padding='same', activation=actv)
+                print('\n ******** Shape of c1:', c1.get_shape().as_list())                
                 c2 = Utils.conv_block(c1, filters=128, kernel_size=ksize, strides=2, padding='same', actv=actv)
                 c3 = Utils.conv_block(c2, filters=256, kernel_size=ksize, strides=2, padding='same', actv=actv)
-                c4 = Utils.conv_block(c3, filters=512, kernel_size=ksize, strides=2, padding='same', actv=actv)
+                c4 = Utils.conv_block(c3, filters=512, kernel_size=ksize, strides=2, padding='same', actv=actv) 
                 out = tf.layers.conv2d(c4, 1, kernel_size=ksize, strides=1, padding='same')
 
-                if use_sigmoid is True:  # Otherwise use LS-GAN
+                if use_sigmoid is True:  # Otherwise use LS-GAN, same as Vanilla Gan s default value in config, which is False
                     out = tf.nn.sigmoid(out)
+            
+            print('\n ******** Shape of out:', out.get_shape().as_list())
 
             return out, c1, c2, c3, c4
 
         with tf.variable_scope('discriminator', reuse=reuse):
+            print('Inside ajh * * * * * ')
             disc, *Dk = discriminator(x, 'original')
             disc_downsampled_2, *Dk_2 = discriminator(x2, 'downsampled_2')
             disc_downsampled_4, *Dk_4 = discriminator(x4, 'downsampled_4')
@@ -228,7 +338,7 @@ class Network(object):
         + z:    Drawn from latent distribution - [batch_size, noise_dim]
         + C:    Bottleneck depth, controls bpp - last dimension of encoder output
         """
-
+        print('!!!!!!!!!!!!!!! shape of z :', z.get_shape())
         print("********* Network dcgan_generator called **********")
         init =  tf.contrib.layers.xavier_initializer()
         kwargs = {'center':True, 'scale':True, 'training':training, 'fused':True, 'renorm':False}

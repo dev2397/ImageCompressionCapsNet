@@ -15,9 +15,18 @@ class Model():  #object created in train.py
         # Build the computational graph
 
         print('Building computational graph ...')
-        self.G_global_step = tf.Variable(0, trainable=False)
+        self.G_global_step = tf.Variable(0, trainable=False)  
         self.D_global_step = tf.Variable(0, trainable=False)
+        '''
+        G_global_setup and D_global_setup are objects of tf.Variable class which are initialized with a value of 0. From tf documentation :
+        trainable: If True, the default, also adds the variable to the graph collection GraphKeys.TRAINABLE_VARIABLES. This collection is used as the default list of variables to use by the Optimizer
+        classes.
+        ''' 
         self.handle = tf.placeholder(tf.string, shape=[])
+        '''
+acts as a placeholder. While Variables are trained over time, placeholders are used for input data that doesn't change as your model trains (like input images, and class labels for those images).
+the first argument specifies the input type and the 2nd argument specifies the shape. In a placeholder, no initial value needs to be specified. Placeholder simply allocates block of memory for future use. generally Placeholders are used for input data ( they are kind of variables which we use to feed our model), where as Variables are parameters such as weights that we train over time.
+        '''
         self.training_phase = tf.placeholder(tf.bool)
 
         # >>> Data handling
@@ -52,14 +61,19 @@ class Model():  #object created in train.py
         if config.use_conditional_GAN:
             self.example, self.semantic_map = self.iterator.get_next()
         else:
+            print('Check how many times get_next is called * * * * * * : ')
             self.example = self.iterator.get_next()
 
         # Global generator: Encode -> quantize -> reconstruct
         # =======================================================================================================>>>
         with tf.variable_scope('generator'):
+            
             self.feature_map = Network.encoder(self.example, config, self.training_phase, config.channel_bottleneck)
+            #self.ab = tf.Print(self.feature_map,[tf.shape(self.feature_map),self.feature_map])
+            #print('self.ab is and its shape :  ', self.ab, self.ab.shape, self.ab.get_shape())
+            #print(' self.feature_map.get_shape() : ',self.feature_map.get_shape())
             self.w_hat = Network.quantizer(self.feature_map, config)
-
+                
             if config.use_conditional_GAN:
                 self.semantic_feature_map = Network.encoder(self.semantic_map, config, self.training_phase, 
                     config.channel_bottleneck, scope='semantic_map')
@@ -77,6 +91,7 @@ class Model():  #object created in train.py
                 print('self.w_hat.shape : ',self.w_hat.shape)
                 print('Gv.shape : ',Gv.shape)
                 self.z = tf.concat([self.w_hat, Gv], axis=-1)
+                #print("@@@@@@@@@@@@@shape of z : ", self.z.get_shape(), self.z.shape)
             else:
                 self.z = self.w_hat
 
@@ -97,18 +112,20 @@ class Model():  #object created in train.py
             self.reconstruction = tf.concat([self.reconstruction, self.semantic_map], axis=-1)
 
         if config.multiscale:
+            print('example.get_shape : ',self.example.get_shape() )
+            print('reconstruction.get_shape : ',self.reconstruction.get_shape() )
             print('In if, config multiscale is true')
-            D_x, D_x2, D_x4, *Dk_x = Network.multiscale_discriminator(self.example, config, self.training_phase, 
-                use_sigmoid=config.use_vanilla_GAN, mode='real')
-            D_Gz, D_Gz2, D_Gz4, *Dk_Gz = Network.multiscale_discriminator(self.reconstruction, config, self.training_phase, 
-                use_sigmoid=config.use_vanilla_GAN, mode='reconstructed', reuse=True)
+            D_x, D_x2, D_x4 = Network.capsule_discriminator(self.example, config, self.training_phase,use_sigmoid=config.use_vanilla_GAN, mode='real')
+            print("&&&&&&&&&&&&&&&&&&&&&&&shape of D_x :", D_x.get_shape().as_list(), D_x.shape)
+            D_Gz, D_Gz2, D_Gz4 = Network.capsule_discriminator(self.reconstruction, config, self.training_phase,use_sigmoid=config.use_vanilla_GAN, mode='reconstructed', reuse=True)
+            print("%%%%%%%%%%%%%%%%%% shape of D_Gz :", D_Gz.get_shape(),D_Gz.shape)
         else:
             D_x = Network.discriminator(self.example, config, self.training_phase, use_sigmoid=config.use_vanilla_GAN)
             D_Gz = Network.discriminator(self.reconstruction, config, self.training_phase, use_sigmoid=config.use_vanilla_GAN, reuse=True)
          
         # Loss terms 
         # =======================================================================================================>>>
-        if config.use_vanilla_GAN is True:
+        if config.use_vanilla_GAN is True: # This is false in config by default
             # Minimize JS divergence
             D_loss_real = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=D_x,
                 labels=tf.ones_like(D_x)))
@@ -121,7 +138,9 @@ class Model():  #object created in train.py
         else:
             # Minimize $\chi^2$ divergence
             self.D_loss = tf.reduce_mean(tf.square(D_x - 1.)) + tf.reduce_mean(tf.square(D_Gz))
+            print("$$$$$$$$$$$$$$ self.D_loss : ", self.D_loss, " type : ", self.D_loss.get_shape())
             self.G_loss = tf.reduce_mean(tf.square(D_Gz - 1.))
+            print("$$$$$$$$$$$$$$ self.G_loss : ", self.G_loss, " type : ", self.G_loss.get_shape())            
 
             if config.multiscale:
                 self.D_loss += tf.reduce_mean(tf.square(D_x2 - 1.)) + tf.reduce_mean(tf.square(D_x4 - 1.))

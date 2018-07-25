@@ -53,12 +53,18 @@ def train(config, args):
         feed_dict_test_init = {gan.test_path_placeholder: test_paths}
         feed_dict_train_init = {gan.path_placeholder: paths}
 
+##########################################################################################
+
+    print('/////////////// Just before creating session ///////////////')
     with tf.Session(config=tf.ConfigProto(allow_soft_placement=True, log_device_placement=False)) as sess:
         sess.run(tf.global_variables_initializer())
         sess.run(tf.local_variables_initializer())
+        print("////////////after variables are initialized")
         train_handle = sess.run(gan.train_iterator.string_handle())
         test_handle = sess.run(gan.test_iterator.string_handle())
-
+        print("////////////after handles are initialized")
+        #sess.run(gan.ab)
+        #print('9999999999999999999999 ab eval 999999999999999999999999',gan.ab.eval())
         if args.restore_last and ckpt.model_checkpoint_path:
             # Continue training saved model
             saver.restore(sess, ckpt.model_checkpoint_path)
@@ -68,11 +74,13 @@ def train(config, args):
                 new_saver = tf.train.import_meta_graph('{}.meta'.format(args.restore_path))
                 new_saver.restore(sess, args.restore_path)
                 print('{} restored.'.format(args.restore_path))
-
+        print("////////////after checkpoints are initialized")        
         sess.run(gan.test_iterator.initializer, feed_dict=feed_dict_test_init)
-
+        i=0
         for epoch in range(config.num_epochs):
-
+            print("/////////////////inside epoch loop")
+            i=i+1
+            print("iteration no ",i)
             sess.run(gan.train_iterator.initializer, feed_dict=feed_dict_train_init)
 
             # Run diagnostics
@@ -88,7 +96,7 @@ def train(config, args):
 
                     # Update discriminator 
                     step, _ = sess.run([gan.D_global_step, gan.D_train_op], feed_dict=feed_dict)
-
+                    
                     if step % config.diagnostic_steps == 0:
                         G_loss_best, D_loss_best = Utils.run_diagnostics(gan, config, directories, sess, saver, train_handle,
                             start_time, epoch, args.name, G_loss_best, D_loss_best)
@@ -127,5 +135,5 @@ def main(**kwargs):   # * and ** are used to pass non named and named arguments 
     train(config_train, args) #config_train is a class in config.py which contains hyperparameters. args is an argparse.ArgumentParser() object.
 
 if __name__ == '__main__':    # at the start of execution, python has some global variables defined. if it is being used as a program, __name__ is set to __main__, otherwise if used as module, its
-    main(one='1',two='2')                    # assigned the name of the file.
+    main()                    # assigned the name of the file.
 

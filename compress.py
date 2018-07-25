@@ -54,7 +54,7 @@ def single_compress(config, args):
 
         if args.output_path is None:
             output = os.path.splitext(os.path.basename(args.image_path))
-            save_path = os.path.join(directories.samples, '{}_compressed.pdf'.format(output[0]))
+            save_path = os.path.join(directories.samples, '{}_compressed.png'.format(output[0]))
         else:
             save_path = args.output_path
         Utils.single_plot(0, 0, sess, gan, handle, save_path, config, single_compress=True)
