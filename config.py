@@ -27,7 +27,7 @@ class config_train(object):  #object of this class is passed as argument in trai
     channel_bottleneck = 8
     sample_noise = True
     use_vanilla_GAN = False
-    use_feature_matching_loss = True
+    use_feature_matching_loss = False
     upsample_dim = 256
     multiscale = True
     feature_matching_weight = 10

@@ -19,6 +19,7 @@ class Utils(object):
         x = tf.layers.conv2d(x, filters, kernel_size, strides=strides, padding=padding, activation=None)
         x = tf.contrib.layers.instance_norm(x, **in_kwargs)
         x = actv(x)
+        print('\n ******** Shape of x after conv operation:', x.get_shape().as_list())
 
         return x
 
@@ -115,13 +116,12 @@ class Utils(object):
             images.append(im)
 
             # Uncomment to plot real and generated samples separately
-            # f = plt.figure()
-            # plt.imshow(im)
-            # plt.axis('off')
-            # f.savefig("{}/gan_compression_{}_epoch{}_step{}_{}.pdf".format(directories.samples, name, epoch,
-            #                     global_step, imtype), format='pdf', dpi=720, bbox_inches='tight', pad_inches=0)
-            # plt.gcf().clear()
-            # plt.close(f)
+            f = plt.figure()
+            plt.imshow(im)
+            plt.axis('off')
+            f.savefig("{}/gan_compression_{}_epoch{}_step{}_{}.pdf".format(directories.samples, name, epoch,global_step, imtype), format='pdf', dpi=720, bbox_inches='tight', pad_inches=0)
+            plt.gcf().clear()
+            plt.close(f)
 
         comparison = np.hstack(images)
         f = plt.figure()
