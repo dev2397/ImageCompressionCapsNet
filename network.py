@@ -266,15 +266,15 @@ class Network(object):
         
         with tf.variable_scope('discriminator', reuse=reuse):
             print('Inside ajh * * * * * ')
-            disc = discriminator(x, 'original', downsample='x')
-            print("############333shape of disc passed to discriminator :", disc.get_shape().as_list())
+            #disc = discriminator(x, 'original', downsample='x')
+            #print("############333shape of disc passed to discriminator :", disc.get_shape().as_list())
             disc_downsampled_2 = discriminator(x2, 'downsampled_2', downsample='x2')
             print("############333shape of disc passed to discriminator :", disc_downsampled_2.get_shape().as_list())
             disc_downsampled_4 = discriminator(x4, 'downsampled_4', downsample='x4')
             print("############333shape of disc passed to discriminator :", disc_downsampled_4.get_shape().as_list())
 
-        return disc, disc_downsampled_2, disc_downsampled_4
-
+        #return disc, disc_downsampled_2, disc_downsampled_4
+        return disc_downsampled_2, disc_downsampled_4
 
 
 

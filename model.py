@@ -115,13 +115,13 @@ the first argument specifies the input type and the 2nd argument specifies the s
             print('example.get_shape : ',self.example.get_shape() )
             print('reconstruction.get_shape : ',self.reconstruction.get_shape() )
             print('In if config.multiscale is true')
-            D_x, D_x2, D_x4 = Network.capsule_discriminator(self.example, config, self.training_phase,use_sigmoid=config.use_vanilla_GAN, mode='real')
+            D_x, D_x2 = Network.capsule_discriminator(self.example, config, self.training_phase,use_sigmoid=config.use_vanilla_GAN, mode='real')
             print("&&&&&&&&&&&&&&&&&&&&&&&shape of D_x :", D_x.get_shape().as_list(), D_x.shape)
-            D_Gz, D_Gz2, D_Gz4 = Network.capsule_discriminator(self.reconstruction, config, self.training_phase,use_sigmoid=config.use_vanilla_GAN, mode='reconstructed', reuse=True)
+            D_Gz, D_Gz2 = Network.capsule_discriminator(self.reconstruction, config, self.training_phase,use_sigmoid=config.use_vanilla_GAN, mode='reconstructed', reuse=True)
             print("%%%%%%%%%%%%%%%%%% shape of D_Gz :", D_Gz.get_shape(),D_Gz.shape)
         else:
-            D_x = Network.discriminator(self.example, config, self.training_phase, use_sigmoid=config.use_vanilla_GAN)
-            D_Gz = Network.discriminator(self.reconstruction, config, self.training_phase, use_sigmoid=config.use_vanilla_GAN, reuse=True)
+            D_x = Network.capsule_discriminator(self.example, config, self.training_phase, use_sigmoid=config.use_vanilla_GAN, mode= 'real')
+            D_Gz = Network.capsule_discriminator(self.reconstruction, config, self.training_phase, use_sigmoid=config.use_vanilla_GAN, mode = 'reconstructed', reuse=True)
          
         # Loss terms 
         # =======================================================================================================>>>
@@ -143,8 +143,8 @@ the first argument specifies the input type and the 2nd argument specifies the s
             print("$$$$$$$$$$$$$$ self.G_loss : ", self.G_loss, " type : ", self.G_loss.get_shape())            
 
             if config.multiscale:
-                self.D_loss += tf.reduce_mean(tf.square(D_x2 - 1.)) + tf.reduce_mean(tf.square(D_x4 - 1.))
-                self.D_loss += tf.reduce_mean(tf.square(D_Gz2)) + tf.reduce_mean(tf.square(D_Gz4))
+                self.D_loss += tf.reduce_mean(tf.square(D_x2 - 1.)) # + tf.reduce_mean(tf.square(D_x4 - 1.))
+                self.D_loss += tf.reduce_mean(tf.square(D_Gz2)) # + tf.reduce_mean(tf.square(D_Gz4))
 
         distortion_penalty = config.lambda_X * tf.losses.mean_squared_error(self.example, self.reconstruction)
         self.G_loss += distortion_penalty
