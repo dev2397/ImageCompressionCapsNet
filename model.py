@@ -3,11 +3,21 @@
 import tensorflow as tf
 import numpy as np
 import glob, time, os
+import tflib as lib
 
 from network import Network
 from data import Data
 from config import directories
 from utils import Utils
+
+import tflib as lib
+import tflib.ops.linear
+import tflib.ops.conv2d
+import tflib.ops.batchnorm
+import tflib.ops.deconv2d
+import tflib.save_images
+import tflib.mnist
+import tflib.plot
 
 class Model():  #object created in train.py
     def __init__(self, config, paths, dataset, name='gan_compression', evaluate=False):
@@ -122,7 +132,7 @@ the first argument specifies the input type and the 2nd argument specifies the s
         else:
             D_x = Network.capsule_discriminator(self.example, config, self.training_phase, use_sigmoid=config.use_vanilla_GAN, mode= 'real')
             D_Gz = Network.capsule_discriminator(self.reconstruction, config, self.training_phase, use_sigmoid=config.use_vanilla_GAN, mode = 'reconstructed', reuse=True)
-         
+        ''' 
         # Loss terms 
         # =======================================================================================================>>>
         if config.use_vanilla_GAN is True: # This is false in config by default
@@ -153,8 +163,40 @@ the first argument specifies the input type and the 2nd argument specifies the s
             D_x_layers, D_Gz_layers = [j for i in Dk_x for j in i], [j for i in Dk_Gz for j in i]
             feature_matching_loss = tf.reduce_sum([tf.reduce_mean(tf.abs(Dkx-Dkz)) for Dkx, Dkz in zip(D_x_layers, D_Gz_layers)])
             self.G_loss += config.feature_matching_weight * feature_matching_loss
+        '''
+        gen_params = lib.params_with_name('Generator')
+
+        # Obtain parameters differently for disciminator (we used variable scope previously)
+        # disc_params = lib.params_with_name('Discriminator')
+        trainable_vars = tf.trainable_variables()
+        disc_params = [var for var in trainable_vars if var.name.startswith("CapsDiscrim")]
+
+
+        # Loss terms 
+        # =======================================================================================================>>>
+        self.G_loss = -tf.reduce_mean(D_Gz)
+        self.D_loss = tf.reduce_mean(D_Gz) - tf.reduce_mean(D_x)
+        alpha = tf.random_uniform(shape=[config.batch_size,1], minval=0.,maxval=1.)
+        differences = self.reconstruction - self.example
+        x, config, training, actv=tf.nn.leaky_relu, use_sigmoid=False, ksize=4, mode='real', reuse=False):  
+        interpolates = real_data + (alpha*differences)
+
+        print(interpolates.get_shape())
+   
+        gradients = tf.gradients(capsule_discriminator(interpolates,config, training, reuse=True, batchsize=1), [interpolates])[0]
+        slopes = tf.sqrt(tf.reduce_sum(tf.square(gradients), reduction_indices=[1]))
+        gradient_penalty = tf.reduce_mean((slopes-1.)**2)
+        disc_cost += LAMBDA*gradient_penalty
+
+        G_opt = tf.train.AdamOptimizer(learning_rate=1e-4,beta1=0.5,beta2=0.9).minimize(gen_cost,var_list=gen_params)
+        D_opt = tf.train.AdamOptimizer(learning_rate=5e-6, beta1=0.5,beta2=0.9).minimize(disc_cost, var_list=disc_params)
+
+
+    clip_disc_weights = None
 
         
+        
+        '''
         # Optimization
         # =======================================================================================================>>>
         G_opt = tf.train.AdamOptimizer(learning_rate=config.G_learning_rate, beta1=0.5)
@@ -204,3 +246,5 @@ the first argument specifies the input type and the 2nd argument specifies the s
             os.path.join(directories.tensorboard, '{}_train_{}'.format(name, time.strftime('%d-%m_%I:%M'))), graph=tf.get_default_graph())
         self.test_writer = tf.summary.FileWriter(
             os.path.join(directories.tensorboard, '{}_test_{}'.format(name, time.strftime('%d-%m_%I:%M'))))
+        '''
+        ererer
